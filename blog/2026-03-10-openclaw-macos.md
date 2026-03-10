@@ -135,33 +135,14 @@ openclaw onboard --flow quickstart
 
 ## 四、配置 AI 模型
 如果后续额外配置其他AI模型，可以参考以下步骤：
-
-### 1. 查看可用模型
-
 ```bash
-openclaw models list
+openclaw config
 ```
+选择```Local```→```Model```
 
-默认配置使用 `anthropic/claude-opus-4-6` 模型。
+随后选择自己的提供商。如果没有则选择```Custom Provider```。随后同上方 初始化配置```API Keys```处所提的相同方式配置。
 
-### 2. 配置 API Key
-
-OpenClaw 支持多种 AI 模型提供商。以配置 DeepSeek 为例：
-
-```bash
-openclaw config set models.deepseek.apiKey "your-api-key-here"
-openclaw config set agents.defaults.model "deepseek/deepseek-chat"
-```
-
-支持的模型提供商包括：
-- Anthropic Claude
-- OpenAI GPT
-- DeepSeek
-- 豆包（Doubao）
-- Google Gemini
-- 本地模型（Ollama）
-
-### 3. 验证配置
+### 验证配置
 
 ```bash
 openclaw health
