@@ -28,9 +28,11 @@ OpenClaw 是一款强大的开源 AI Agent 工具，相比 Windows 环境，macO
 
 #### 如何查看自己的 macOS 版本？
 1. 打开终端（也叫Terminal）
+
 ![终端图片](/res/terminal.png)
 
 2. 输入```sw_vers```并回车，```ProductVersion```后的即为版本号
+
 ![版本号](/res/macos-version.png)
 
 ### 2. 检查 Homebrew
@@ -111,7 +113,18 @@ openclaw onboard --flow quickstart
 
 后续配置项建议按需简化（可使用最小化跑通再深层配置）：
 - **模型/Model**：选择所需模型，若暂未准备 API 可选 `skip for now`。
-- **API Keys**：提供对应的 API Key (例如 Kimi 或 DeepSeek)，其余保持默认。
+- **API Keys**：提供对应的 API Key (例如 Kimi、DeepSeek 或 MiniMax)，其余保持默认。
+  
+下面以 MiniMax 为例获取 API Key：
+  
+  1. 打开浏览器前往 [MiniMax 开发者平台 (platform.minimaxi.com)](https://platform.minimaxi.com/)，并通过手机号快速注册/登录。
+  2. 登录后，在页面右上角中找到并点击 **账户管理** ，左侧栏选择 **接口密钥** ，
+     
+     ![MiniMax 控制台配置 API Keys](/res/minimax-api-keys.png)
+  3. 点击 **创建新的 API Key** 或 **+ 新建**，给这个 Key 随意命名（比如 "OpenClaw"）并确认。
+  4. 系统会生成一串以 `sk-` 开头的密钥。**该密钥仅会完整显示一次**，请务必立刻**复制并妥善保存**至密码管理器或安全位置，切勿发给他人。
+     
+     ![获取并复制 API Key](/res/minimax-sk-key.png)
 
 ![API Key配置](/res/api-key-config-macos.png)
 
@@ -121,7 +134,7 @@ openclaw onboard --flow quickstart
 
 ![hooks设置](/res/hooks-config-macos.png)
 
-- **Hatch your bot**：选择 `open in web ui`，将启动网关服务并在浏览器弹出控制台页面 `http://127.0.0.1:18789/`。控制台启动完成并可发消息回复，即代表基础运行成功。
+- **Hatch your bot**：选择 `open in web ui`，将启动网关服务并在浏览器弹出控制台页面 `http://127.0.0.1:18789/`。控制台启动完成并可发消息回复，即代表基础运行成功。*(注：目前 Web UI 界面仍处于早期阶段，体验还不是很完善。对于熟悉命令行的用户，强烈推荐使用命令行交互，后续可通过终端输入 `openclaw tui` 进入。)*
 
 ![Web控制台](/res/openclaw-web-macos.png)
 
@@ -147,6 +160,15 @@ openclaw config
 ```bash
 openclaw health
 ```
+
+### 动态切换模型
+
+如果需要在聊天过程中临时切换不同的 AI 模型，可以在终端使用 TUI（文本用户界面）进行操作：
+1. 在终端输入 `openclaw tui` 打开命令行交互界面。
+2. 在对话框中输入 `/model`（或者 `/models`）并回车。
+3. 使用键盘的上下方向键挑选想要的模型，最后回车确认，即可切换成功。
+
+![动态切换模型](/res/change-model-macos.png)
 
 ---
 
@@ -292,4 +314,5 @@ npm config set registry https://registry.npmmirror.com
 完整文档：[https://docs.openclaw.ai](https://docs.openclaw.ai)
 
 整个 macOS 环境下的 OpenClaw 部署流程到此完成。
+
 —— GeekPie 社团，2026 年 3 月 10 日
