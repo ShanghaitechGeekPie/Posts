@@ -52,7 +52,7 @@ ClawHavoc 供应链攻击是 OpenClaw 历史上最严重的安全事件之一，
    # 扫描已安装的skills
    secureclaw scan ~/.openclaw/skills/
    ```
-3. **优先使用精选列表：** 参考 [awesome-openclaw-skills](https://github.com/awesome-openclaw-skills) 项目（近 31.4K Stars）的精选列表，过滤掉大量垃圾和恶意 Skill。
+3. **优先使用精选列表：** 参考 [awesome-openclaw-skills](https://github.com/VoltAgent/awesome-openclaw-skills) 项目（近 31.4K Stars）的精选列表，过滤掉大量垃圾和恶意 Skill。
 4. **定期检查记忆文件：** 养成习惯，定期检查 `SOUL.md` 和 `MEMORY.md` 有没有被异常修改。
 
 **关键认知：** OpenClaw 的 Skill 本质上是受信任代码。一旦安装，它就拥有和你的 OpenClaw 实例相同的权限。没有沙箱隔离，没有权限分级。这和 npm 生态早期面临的问题一模一样，但后果可能更严重，因为 OpenClaw 可以访问你的邮件、日历、消息和文件系统。
