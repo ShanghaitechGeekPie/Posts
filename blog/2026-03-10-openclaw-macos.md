@@ -11,8 +11,6 @@ tags:
   - 配置
 ---
 
-# macOS 环境下 OpenClaw 完全部署与配置教程
-
 [Windows 安装教程点我](https://geekpie.club/posts/blog/2026-03-09-openclaw/)
 OpenClaw 是一款强大的开源 AI Agent 工具，相比 Windows 环境，macOS 的安装体验更加流畅，得益于 Homebrew 包管理器的自动化支持。本文将详细记录在 macOS 上从零开始安装、配置 OpenClaw 的完整流程。
 
