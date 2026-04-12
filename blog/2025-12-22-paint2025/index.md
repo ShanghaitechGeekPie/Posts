@@ -1,0 +1,574 @@
+---
+title: 2025 新年绘板——规则说明、 API 文档及样例
+layout: blog
+date: 2025-12-22
+author: ZAMBAR
+summary: 即日起至 2025/12/31 23:59:59，2025 新年绘板都将开放。本文介绍了其具体的规则补充，可用于编程的 API 文档和一个最小 Python 样例
+tags:
+  - GeekPie
+  - Paint
+  - Post
+---
+
+# 2025 新年绘板
+
+- Link: https://paint2025.geekpie.club
+- 活动时间：即日起至 2025/12/31 23:59:59
+
+> [!note]
+>
+> 本文最近已于 2025/12/24 02:55 (UTC+8) 有更新，之前的消息可能过时。
+>
+> - 2025/12/24: 预祝大家圣诞节快乐！我们紧急修复了样例中在某些校园网环境下无法访问服务器的问题 ~~（图信你干得好啊）~~，并更新了相关配置要求。
+
+活动具体详情见 Event 页面
+
+## 规则补充说明
+
+- 第一天为了快速占有领地，我们给出了 128 体力槽和 1.5 秒的体力恢复时间，之后为了保证作品不会被覆盖，我们会随着时间推移增加冷却间隔和减少体力槽。
+- 我们允许并支持组队（合理收集他人 Token）和使用 BOT 绘图，这有助于你快速的更新版图。
+- 请不要恶意覆盖他人图案。
+- 请不要攻击服务器，公开他人信息。
+- 请不要绘制任何不适当的内容，包括但不限于涉政、色情、暴力、仇恨言论等。
+
+## API 文档
+
+### 非绘画 API
+
+#### POST `/api/auth/exchange` - 令牌交换
+
+> ⚠️：我们推荐手动获取 Token，此处仅为列出。
+
+- **功能**: 与 Casdoor 进行 OAuth2 OIDC 集成，交换用户令牌获取会话
+- **请求体**: `{ token: string }`
+- **返回**: 包含 `sessionToken` 和用户信息
+- **认证**: 使用 Casdoor OIDC userinfo 端点验证令牌
+- **存储**: 在 MongoDB 中创建/更新用户会话，分配绘制点数额度
+
+
+## GET `/api/v2/place` 获取画板数据 (JSON)
+
+> ⚠️：**不再维护。**可能存在延迟且由于 JSON 格式开销较大，仅供初始化或调试使用，不推荐频繁轮询。
+
+- **功能**: 获取当前画板上所有已绘制的点及配置信息。
+
+- **返回**:
+
+    ```json
+    {
+    "status": true,
+    "data": {
+        "points": [
+        { "x": 10, "y": 20, "c": "ff0000" },
+        { "x": 15, "y": 25, "c": "00ff00" }
+        ],
+        "colors": ["000000", "ffffff", ...], // 预置颜色列表
+        "delay": 5,                           // 绘制延迟时间（秒）
+        "actionCount": 12345                  // 总操作次数
+    }
+    }
+    ```
+
+- **认证**: 无需认证
+
+---
+
+## GET `/api/v2/init` - 获取画板数据 (Binary)
+
+- **功能**: 以二进制流格式高效获取画板数据，支持增量更新。
+
+- **URL 参数**:
+    - `since` (可选): 上次获取到的操作计数（Action Count）。如果提供且大于 0，则返回自该操作以来的增量更新数据；否则返回全量数据。
+
+- **返回**: `application/octet-stream` 二进制流
+
+
+**二进制结构解析**:
+
+数据流由 **Header** 和 **Points Body** 两部分组成。所有多字节整数均采用 **Little-Endian (小端序)**。
+
+**Header 结构**
+
+| 字段 | 类型 | 字节数 | 说明 |
+| :--- | :--- | :--- | :--- |
+| Action Count | UInt32 | 4 | 当前总操作次数 (用于下次请求 `since` 参数) |
+| Delay | Float32 | 4 | 绘制延迟时间（秒） |
+| Palette Size | UInt8 | 1 | 调色板颜色数量 (N) |
+| Palette | UInt8 Array | N * 3 | 调色板颜色数据，每个颜色 3 字节 (R, G, B) |
+| Points Count | UInt32 | 4 | 随后的点数据数量 (M) |
+
+**Points Body 结构**
+
+紧接 Header 之后，包含 M 个点的数据。每个点占用 7 字节。
+
+| 字段 | 类型 | 字节数 | 说明 |
+| :--- | :--- | :--- | :--- |
+| X | UInt16 | 2 | X 坐标 |
+| Y | UInt16 | 2 | Y 坐标 |
+| Color | UInt8 Array | 3 | 颜色值 (R, G, B) |
+
+**解析示例 (伪代码)**:
+
+```javascript
+// 假设 buffer 是接收到的 ArrayBuffer
+let offset = 0;
+const view = new DataView(buffer);
+
+// 1. 读取 Action Count
+const actionCount = view.getUint32(offset, true); // true for Little-Endian
+offset += 4;
+
+// 2. 读取 Delay
+const delay = view.getFloat32(offset, true);
+offset += 4;
+
+// 3. 读取 Palette
+const paletteSize = view.getUint8(offset);
+offset += 1;
+
+const palette = [];
+for (let i = 0; i < paletteSize; i++) {
+  const r = view.getUint8(offset++);
+  const g = view.getUint8(offset++);
+  const b = view.getUint8(offset++);
+  palette.push({ r, g, b });
+}
+
+// 4. 读取 Points Count
+const pointsCount = view.getUint32(offset, true);
+offset += 4;
+
+// 5. 读取 Points
+const points = [];
+for (let i = 0; i < pointsCount; i++) {
+  const x = view.getUint16(offset, true);
+  offset += 2;
+  const y = view.getUint16(offset, true);
+  offset += 2;
+  const r = view.getUint8(offset++);
+  const g = view.getUint8(offset++);
+  const b = view.getUint8(offset++);
+  points.push({ x, y, color: { r, g, b } });
+}
+```
+
+- **认证**: 无需认证
+
+#### GET `/api/status` - 统计信息
+
+- **功能**: 获取应用的统计数据
+- **返回**:
+
+  ```json
+  {
+    "status": true,
+    "data": {
+      "totalActions": 12345,     // 总绘制操作数
+      "totalUsers": 789,         // 总用户数
+      "timestamp": "2025-12-23..."
+    }
+  }
+  ```
+
+- **认证**: 无需认证
+
+---
+
+### 绘画 API
+
+本次绘画相关 API 没有使用 HTTP Endpoint，因此所有的请求都不会产生新的 HTTP 请求，如需抓包请从开始的 Websocket 会话中提取信息。
+
+#### 连接信息
+
+- 协议: Socket.io v4 (并非原生 WebSocket)
+- 端点 (Endpoint): `https://paint2025.geekpie.club`
+- 命名空间 (Namespace): `/` (默认)
+- 认证方式: 在建立连接握手（Handshake）时，需要在 auth 对象中携带 Token。
+  - Token 获取方式：登录网页版后，在 Token 输入框复制或者刷新。
+
+#### 连接流程
+
+要通过 API 进行绘画，你需要使用 Websocket 建立一个会话，并且通过这个绘画不断发送和监听消息。我们已经通过 Socket.IO 简化了对应流程，大致流程主要如下：
+
+1. **握手认证**: 你需要通过携带 Token 发送请求，实现建连。
+2. **中间件验证**: 服务器验证令牌有效性，触发 `authenticated` 时间通知认证结果和初始点数。
+3. **房间加入**: 服务器根据令牌自动将您加入 Token 对应房间，房间内广播 `sync` 事件用来同步剩余点数和最后计算时间。
+4. **开始绘画**：客户端发送 `draw` 事件进行绘画，你可以通过 Socket.IO 的 Callback(ACK) 来获取返回信息。
+5. **广播更新**：绘画成功后服务器统一广播 `draw` 事件进行增量更新。
+
+#### 事件列表
+
+| 事件名 | 方向 | 说明 |
+|--------|------|------|
+| **authenticated** | 服务器→客户端 | 连接建立时返回认证结果和初始点数 |
+| **draw** | 客户端↔服务器 | 客户端请求绘制操作，服务器广播绘制进行同步（含速率限制、点数消耗） |
+| **sync** | 服务器→客户端 | 返回绘制后剩余点数和最后更新时间 |
+| **onlineClientsUpdated** | 服务器→客户端 | 广播在线用户数量变化 |
+| **disconnect** | 系统事件 | 用户断开连接时触发 |
+
+#### 数据格式
+
+##### `PointData`
+
+描述一个像素点
+
+| 字段 | 类型 | 说明 | 示例 |
+| --- | --- | --- | --- |
+| `x` | Integer | X 坐标 (`0` ~ `CANVAS_WIDTH-1`) | `100` |
+| `y` | Integer | Y 坐标 (`0` ~ `CANVAS_HEIGHT-1`) | `200` |
+| `c` | String | 颜色 (Hex 格式字符串) | `"#FF0000"` |
+| `w` | Number | 宽度 (⚠️限制为 1，即将删除) | `1` |
+| `h` | Number | 高度 (⚠️限制为 1，即将删除) | `1` |
+| `user` | String | **(仅接收)** 绘制该点的用户名 | `"user_123"` |
+
+#### 客户端推送事件
+
+##### `draw`
+
+用于请求在画布上绘制一个点。
+
+- **频率限制**: 受服务端 `DRAW_MAX_POINTS` 和 `DRAW_DELAY_MS` 控制（类似于体力槽机制）。
+- **Payload 结构**:
+
+    ```json
+    {
+        "data": { // 参考 `PointData`
+            "x": 100,
+            "y": 200,
+            "c": "#000000",
+            "w": 1, // 必须为 1
+            "h": 1  // 必须为 1
+        },
+        "token": "xxx" // 已废弃，无需携带
+    }
+
+    ```
+
+- 返回样例(失败)
+
+    ```json
+    {
+        "code": -4,
+        "message": "Insufficient points",
+        "pointsLeft": 0 // 其他情况下为 undefined
+    }
+    ```
+
+- 返回样例(成功)
+
+    ```json
+    {
+        "code": 0,
+        "message": "Draw successful",
+        "pointsLeft": 10
+    }
+    ```
+
+- 错误代码参考
+
+    ```ts
+    export enum AppErrorCode {
+        Success = 0,                // 成功
+        InvalidToken = -1,          // Token 无效
+        UnknownError = -2,          // 未知错误
+        InvalidRequest = -3,        // 请求载荷不正确或 Zod 验证失败
+        InsufficientPoints = -4,    // 体力不足
+        InvalidPosition = -5,       // 位置无效
+    }
+    ```
+
+Example (Python):
+
+```python
+def on_draw_response(result):
+    print(f"Draw response received: {result}")
+    
+    code = result.get('code')
+    points_left = result.get('pointsLeft')
+    last_update = result.get('lastUpdate')
+    message = result.get('message', "Unknown Error")
+
+payload = {
+    "data": {
+        "x": x,
+        "y": y,
+        "c": color,
+        "w": 1,
+        "h": 1
+    }
+}
+
+self.sio.emit("draw", payload, callback=on_draw_response)
+```
+
+#### 服务端推送事件
+
+客户端需要监听这些事件来更新本地状态。
+
+##### `authenticated`
+
+连接成功并验证 Token 后立即发送。
+
+- **数据**:
+
+    ```json
+    {
+        "success": true,
+        "pointsLeft": 10,
+        "lastUpdate": 1766427449915, // ms 时间戳
+    }
+    ```
+
+##### `draw`
+
+**广播事件**。当**其他用户**（或你自己）成功绘制一个点时触发。用于实时同步画布。
+
+- **数据**: 包含完整的点信息 (`x`, `y`, `c`, `user`, `create_at` 等)。
+
+    ```json
+    {
+        "x": 0,
+        "y": 0,
+        "h": 1,
+        "w": 1,
+        "c": "#000000"
+    }
+    ```
+
+##### `onlineClientsUpdated`
+
+当在线用户数量变化时触发。
+
+- **数据**:
+
+    ```json
+    {
+        "count": 123
+    }
+    ```
+
+#### 房间内推送事件
+
+只有根据 token 加入房间后才会按 token 广播的私有事件。
+
+##### `sync`
+
+当你发送 `draw` 请求后，无论成功与否，服务端可能会发送此事件来强制同步客户端的剩余点数。
+
+- **数据**:
+
+    ````json
+    {
+        "pointsLeft": 10,
+        "lastUpdate": 1766427449915
+    }
+    ````
+
+## 样例
+
+### 紧急更新：关于在校内部分网段无法连接服务器的解决办法
+
+我们发现在部分网段下（例如寝室和部分地点）无法通过 Python 的 Websocket 与服务器正常连接。经过排查，我们初步断定这是由于图信的 DNS 将服务器解析成 IPv6 但是没有正确配置 IPv6 出口等基础设施的原因。😠
+
+如果你使用的是自己的脚本，加入下列 patch 在最前方即可强制使用 IPv4 解析：
+
+```python
+import socket
+
+old_getaddrinfo = socket.getaddrinfo
+
+def getaddrinfo_ipv4_only(host, port, *args, **kwargs):
+    # 只保留返回 AF_INET（IPv4）的解析结果
+    results = old_getaddrinfo(host, port, *args, **kwargs)
+    return [res for res in results if res[0] == socket.AF_INET]
+
+socket.getaddrinfo = getaddrinfo_ipv4_only
+```
+
+### 环境准备
+
+下面给出较现代的 uv 格式的环境，保存为 `pyproject.toml` 后用 `uv sync` 即可。
+
+```toml
+[project]
+name = "paint-bot"
+version = "0.1.0"
+description = "paint2025 bot"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=12.0.0",
+    "python-socketio>=5.15.1",
+    "requests>=2.32.5",
+    "websocket-client>=1.9.0",
+]
+```
+
+或者使用 `requirements.txt` 以及 `pip` 手动安装上述 4 个依赖也可以解决问题。注意不要安装 `socketio` 库。
+
+### 代码
+
+关于填涂策略，你可以选择顺序填涂或者防御性更好的和更适合并行的散点式绘图。
+
+下面是一个来自 [@Gregtaoo](https://github.com/GregTaoo/) 编写的基本样例程序，基本实现了多 Token 和绘图，但缺少对 Delay Time 的计算和实时监听 `sync` 同步的过程。
+
+```python
+import argparse
+import time
+import requests
+from PIL import Image
+import socketio
+import threading
+
+def rgb_to_hex(r, g, b):
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def get_canvas_points():
+    resp = requests.get("https://paint2025.geekpie.club/api/place")
+    resp.raise_for_status()
+    data = resp.json()
+    points = {}
+    for p in data.get("data", {}).get("points", []):
+        points[(int(p["x"]), int(p["y"]))] = p["c"].lower()
+    return points
+
+# =========================
+# 单 token Socket.IO 客户端
+# =========================
+class TokenClient:
+    def __init__(self, token: str):
+        self.token = token
+        self.sio = socketio.Client(
+            logger=False,
+            engineio_logger=False
+        )
+        self.connected = False
+
+        @self.sio.event
+        def connect():
+            self.connected = True
+            print(f"[socketio] token {self.token[:6]} connected")
+
+        @self.sio.event
+        def disconnect():
+            self.connected = False
+            print(f"[socketio] token {self.token[:6]} disconnected")
+
+    def connect(self):
+        self.sio.connect(
+            "https://paint2025.geekpie.club",
+            transports=["websocket"],
+            wait=True,
+            wait_timeout=30,
+            auth={
+                "token": self.token
+            }
+        )
+
+    def draw(self, x, y, color):
+        if not self.connected:
+            return False
+        self.sio.emit(
+            "draw",
+            {
+                "data": {"w": 1, "h": 1, "x": x, "y": y, "c": color},
+            },
+        )
+        return True
+
+    def close(self):
+        if self.connected:
+            self.sio.disconnect()
+
+# =========================
+# 主绘制逻辑
+# =========================
+def draw_image_until_complete(img_path, width, height, start_x, start_y, tokens_str):
+    tokens = [t.strip() for t in tokens_str.split(",") if t.strip()]
+    if not tokens:
+        raise ValueError("No valid tokens")
+
+    print(f"Starting with {len(tokens)} tokens")
+
+    # 创建 token 客户端
+    clients = [TokenClient(t) for t in tokens]
+
+    # 并行连接
+    threads = []
+    for c in clients:
+        t = threading.Thread(target=c.connect, daemon=True)
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+    img = Image.open(img_path).convert("RGB")
+    img = img.resize((width, height), Image.LANCZOS)
+    pixels = img.load()
+
+    client_index = 0
+    sleep_time = 0.25
+
+    try:
+        while True:
+            canvas = get_canvas_points()
+            all_done = True
+
+            for dy in range(height):
+                for dx in range(width):
+                    x = start_x + dx
+                    y = start_y + dy
+                    r, g, b = pixels[dx, dy]
+                    color = rgb_to_hex(r, g, b).lower()
+
+                    if canvas.get((x, y)) != color:
+                        all_done = False
+
+                        client = clients[client_index]
+                        client_index = (client_index + 1) % len(clients)
+
+                        if client.draw(x, y, color):
+                            print(
+                                f"[draw] x={x}, y={y}, color={color}, token={client.token[:6]}"
+                            )
+                        else:
+                            print(
+                                f"[draw] skipped (not connected) token={client.token[:6]}"
+                            )
+
+                        time.sleep(sleep_time)
+
+            if all_done:
+                print("All pixels match the target image!")
+                break
+            else:
+                print("Not finished, checking again")
+                time.sleep(5)
+    finally:
+        for c in clients:
+            c.close()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True)
+    parser.add_argument("--width", type=int, required=True)
+    parser.add_argument("--height", type=int, required=True)
+    parser.add_argument("--start-x", type=int, required=True)
+    parser.add_argument("--start-y", type=int, required=True)
+    parser.add_argument("--tokens", required=True)
+    args = parser.parse_args()
+
+    draw_image_until_complete(
+        args.image,
+        args.width,
+        args.height,
+        args.start_x,
+        args.start_y,
+        args.tokens,
+    )
+
+if __name__ == "__main__":
+    main()
+```
+

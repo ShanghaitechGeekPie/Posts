@@ -1,0 +1,23 @@
+---
+title: 欢迎来到 GeekPie Blogs！
+layout: blog
+date: 2025-12-10
+author: ZAMBAR
+summary: 这是一个 Blog 模板，也是一次新的开始。希望 GeekPie Blogs 越办越好！
+tags:
+  - GeekPie
+  - Post
+---
+
+# 新的开始？
+
+> 这是一个 Blog 模板，也是一次新的开始。希望 GeekPie Blogs 越办越好！
+>
+> —— ♥️ from [ZAMBAR](https://github.com/HeZeBang/)
+
+## 碎碎念
+
+其实我也不知道说什么…… ~~其实是为了测试我的渲染到底正不正常~~
+
+![GeekPie_HPC](./geekpie-isc26.png)
+
