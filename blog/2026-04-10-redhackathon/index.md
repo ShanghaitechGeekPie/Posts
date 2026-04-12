@@ -37,6 +37,8 @@ tags:
 
 [DataTech 社团](https://www.datatech.club) 由前 GeekPie 数据科学方向孵化而来，由 GeekPie 社员、22 届本科生洪沐天创立。早在 GeekPie 时期，团队就获得 ADIA Lab 因果发现挑战赛第三名。至今短短几年的创立时间却也已包揽各大奖项，游走于 kaggle 等知名数据科学竞赛中。
 
+![DataTech 社团荣获 Kaggle Deep Past Challenge - Translate Akkadian to English 冠军](./datatech-deep-past.png)
+
 ## ChicChic，做用户和 Tony 老师之间的 Google Translate
 
 “理发就是 VibeCoding，和 Tony 老师永远要解释半天，就像抽卡一样……”
